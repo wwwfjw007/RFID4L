@@ -59,6 +59,7 @@ def rfid_work_thread(msg, dist, server):
 	server_port = server['port']
 	epc = EPC_C1G2.EPC()
 	
+	# 设置为主动模式
 	status_active_epc = set_work_mode(sock, PARA_ACTIVE_MODE_EPC_MEM)
 	print('status_active_epc = 0x%x' % status_active_epc)
 	time.sleep(0.05)
@@ -78,7 +79,7 @@ def rfid_work_thread(msg, dist, server):
 				current_time = time.time()
 				print(current_time - last_active_data[active_data])
 				# 判断时间间隔
-				if current_time - last_active_data[active_data] <= IDENTICAL_COUNTER:
+				if current_time - last_active_data[active_data] <= IDENTICAL_INTERVAL:
 					print('continue')
 					continue
 				else:
@@ -89,11 +90,14 @@ def rfid_work_thread(msg, dist, server):
 			break
 			
 		if active_data is not None:
+			# 设置为应答模式
 			status_answer_user = set_work_mode(sock, PARA_ANSWER_MODE_USER_MEM)
 			print('status_answer_user = 0x%x' % status_answer_user)
 			time.sleep(0.05)
 			
+			# 读取标签卡数据
 			status_read_data, card_data, card_data_len = epc.read_data(sock, active_data)
+			print('********************** card data = ', card_data)
 			if status_read_data == 0:
 				write_data = list(card_data)
 				if card_data[0] == district.inner or card_data[0] == district.init:
@@ -102,14 +106,18 @@ def rfid_work_thread(msg, dist, server):
 					write_data[0] = district.inner
 				else:
 					write_data[0] = district.init
+				print('********************** write data = ', write_data)
 				
+				# 写数据进入标签卡
 				status_write_data = epc.write_data(sock, active_data, write_data, card_data_len)
+				print('status write data = 0x%x' % status_write_data)
 				if status_write_data == 0:
 					upload_data = pack_data(dist, rfid_ID, True, get_epc_num(active_data), write_data)
 					# print('upload data = \n%s' % upload_data)
 					print(server_host, server_port)
 					send_data(server_host, server_port, upload_data)
 			
+			# 重新设置为主动模式
 			status_active_epc = set_work_mode(sock, PARA_ACTIVE_MODE_EPC_MEM)
 			print('status_active_epc = 0x%x' % status_active_epc)
 			time.sleep(0.05)
@@ -119,7 +127,6 @@ def rfid_work_thread(msg, dist, server):
 
 def rfid_work(msg):
 	server = get_server_info()
-
 	for i in msg:
 		threading.Thread(target=rfid_work_thread, args=(msg[i], i, server)).start()
 	return

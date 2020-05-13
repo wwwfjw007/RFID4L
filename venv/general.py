@@ -201,7 +201,7 @@ def send_data(host, port, data):
 			break
 		except socket.error as err:
 			print(err)
-			time.sleep(3)
+			time.sleep(0.5)
 
 	while True:
 		try:
@@ -209,11 +209,10 @@ def send_data(host, port, data):
 			break
 		except socket.error as err:
 			print(err)
-			time.sleep(3)
+			time.sleep(0.5)
 	sock.close()
 	print('send data res =', res)
 	print(data)
-	print(sock)
 	return res
 
 
